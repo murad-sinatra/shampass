@@ -109,7 +109,6 @@ export function App() {
             </div>
             <Button
               variant="ghost"
-              size="sm"
               aria-label={t('switchLang')}
               onClick={() => setLang(lang === 'en' ? 'ar' : 'en')}
             >
