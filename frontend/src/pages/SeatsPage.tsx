@@ -85,7 +85,9 @@ export function SeatsPage({
   }
 
   return (
-    <div className="sp-stack">
+    <>
+    <div className="sp-seats">
+      <div className="sp-seats-copy">
       <FlowSteps current={0} />
       <div className="sp-ride">
         <strong>{lang === 'ar' ? trip.company.ar : trip.company.en}</strong>
@@ -111,7 +113,9 @@ export function SeatsPage({
           {t('taken')}
         </li>
       </ul>
+      </div>
       <SeatMap seats={trip.seats} selected={selected} onToggle={toggle} />
+    </div>
       <div className="sp-dock">
         <div className="sp-dock-inner">
           <div className="sp-dock-copy">
@@ -125,6 +129,6 @@ export function SeatsPage({
           </Button>
         </div>
       </div>
-    </div>
+    </>
   );
 }

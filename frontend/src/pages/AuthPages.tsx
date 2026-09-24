@@ -29,7 +29,7 @@ export function LoginPage({ next, navigate }: { next: string; navigate: Navigate
 
   return (
     <form
-      className="sp-stack"
+      className="sp-stack sp-narrow"
       onSubmit={(event) => {
         event.preventDefault();
         void submit();
@@ -98,7 +98,7 @@ export function RegisterPage({ next, navigate }: { next: string; navigate: Navig
 
   return (
     <form
-      className="sp-stack"
+      className="sp-stack sp-narrow sp-fields"
       onSubmit={(event) => {
         event.preventDefault();
         void submit();
@@ -156,7 +156,7 @@ export function AccountPage({ navigate }: { navigate: Navigate }) {
   const { user, logout } = useAuth();
   if (!user) return null;
   return (
-    <div className="sp-stack">
+    <div className="sp-stack sp-narrow">
       <header className="sp-hero">
         <h1>{t('account')}</h1>
         <p className="sp-lead">{t('signedInAs', { name: user.name })}</p>

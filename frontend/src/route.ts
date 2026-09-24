@@ -157,7 +157,7 @@ export function routeKey(route: AppRoute): string {
     case 'tripEdit':
       return `trip:${route.id ?? 'new'}`;
     case 'results':
-      return `results:${route.query.from}:${route.query.to}:${route.query.date}:${route.query.pax}`;
+      return `results:${route.query.from}:${route.query.to}`;
     case 'seats':
       return `seats:${route.tripId}`;
     case 'pay':

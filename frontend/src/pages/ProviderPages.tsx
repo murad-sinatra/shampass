@@ -32,13 +32,14 @@ export function ProviderHome({ navigate }: { navigate: Navigate }) {
   if (!data && !error) return <p className="sp-loading">{t('loading')}</p>;
 
   return (
-    <div className="sp-stack">
+    <div className="sp-stack sp-desk">
       <header className="sp-hero">
         <p className="sp-kicker">{t('providerHome')}</p>
         <h1>{data ? (lang === 'ar' ? data.company.ar : data.company.en) : t('providerHome')}</h1>
         <p className="sp-lead">{t('providerLead')}</p>
       </header>
       {error && <Alert tone="danger" title={error} />}
+      <div className="sp-desk-grid">
       {data && (
         <div className="sp-stats">
           <button type="button" onClick={() => navigate('#/provider/buses')}>
@@ -60,7 +61,7 @@ export function ProviderHome({ navigate }: { navigate: Navigate }) {
         </div>
       )}
       <form
-        className="sp-form"
+        className="sp-form sp-fields"
         onSubmit={(event) => {
           event.preventDefault();
           void api
@@ -74,6 +75,7 @@ export function ProviderHome({ navigate }: { navigate: Navigate }) {
         <TextField label={t('companyPhone')} description={t('optional')} dir="ltr" value={phone} onChange={(event) => setPhone(event.target.value)} />
         <Button type="submit">{t('save')}</Button>
       </form>
+      </div>
     </div>
   );
 }
@@ -163,7 +165,7 @@ export function BusPage({ id, navigate }: { id: string | null; navigate: Navigat
       <h1 className="sp-page-title">{id ? name || t('buses') : t('newBus')}</h1>
       {error && <Alert tone="danger" title={error} />}
       <form
-        className="sp-form"
+        className="sp-form sp-fields"
         onSubmit={(event) => {
           event.preventDefault();
           void save();
@@ -349,7 +351,7 @@ export function RoutePage({ id, navigate }: { id: string | null; navigate: Navig
 
   return (
     <form
-      className="sp-stack"
+      className="sp-stack sp-fields"
       onSubmit={(event) => {
         event.preventDefault();
         setError('');
@@ -457,7 +459,7 @@ export function TripPage({ id, navigate }: { id: string | null; navigate: Naviga
   if (!id) {
     return (
       <form
-        className="sp-stack"
+        className="sp-stack sp-fields"
         onSubmit={(event) => {
           event.preventDefault();
           setError('');

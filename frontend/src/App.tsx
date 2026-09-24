@@ -1,5 +1,19 @@
-import { useCallback, useEffect, useState } from 'react';
-import { AppShell, Button, Icon, IconButton, SkipLink, TabBar, TabBarItem } from 'mors-component-library';
+import { useCallback, useEffect, useRef, useState } from 'react';
+import { flushSync } from 'react-dom';
+import {
+  AppShell,
+  Button,
+  Icon,
+  IconButton,
+  Sidebar,
+  SidebarHeader,
+  SidebarItem,
+  SidebarNav,
+  SidebarSection,
+  SkipLink,
+  TabBar,
+  TabBarItem,
+} from 'mors-component-library';
 import { useAuth } from './auth';
 import { cityLabel } from './cities';
 import { BusMark, TicketGlyph } from './icons';
@@ -43,14 +57,98 @@ const ACCOUNT_ROUTES = new Set<AppRoute['name']>([
   ...PROVIDER_ROUTES,
 ]);
 
+let activeTransition: { skipTransition: () => void } | null = null;
+
+function playTransition(direction: 'forward' | 'back', update: () => void) {
+  if (!motionOk()) {
+    delete document.documentElement.dataset.spNav;
+    update();
+    return;
+  }
+  document.documentElement.dataset.spNav = direction;
+  const replay = document.documentElement.dataset.spVt === 'b' ? 'a' : 'b';
+  document.documentElement.dataset.spVt = replay;
+  document.documentElement.style.setProperty('--sp-vt-in', replay === 'b' ? '461ms' : '460ms');
+  document.documentElement.style.setProperty('--sp-vt-out', replay === 'b' ? '281ms' : '280ms');
+  try {
+    activeTransition?.skipTransition();
+  } catch {
+    /* The previous move already finished. */
+  }
+  try {
+    activeTransition = document.startViewTransition(() => {
+      flushSync(update);
+    });
+  } catch {
+    update();
+  }
+}
+
 function useHashRoute(): [AppRoute, Navigate] {
   const [route, setRoute] = useState<AppRoute>(() => parseHash(window.location.hash));
+  const hashRef = useRef(window.location.hash);
+  const capturing = useRef(false);
+  const popBack = useRef(false);
+
   useEffect(() => {
-    const onHash = () => setRoute(parseHash(window.location.hash));
+    const onPop = () => {
+      const nextHash = window.location.hash;
+      const prevHash = hashRef.current;
+      if (prevHash === nextHash) {
+        popBack.current = true;
+        return;
+      }
+      hashRef.current = nextHash;
+      popBack.current = false;
+      if (transitionKey(prevHash) !== transitionKey(nextHash)) {
+        capturing.current = true;
+        playTransition('back', () => setRoute(parseHash(nextHash)));
+        capturing.current = false;
+        return;
+      }
+      setRoute(parseHash(nextHash));
+    };
+    const onHash = () => {
+      const nextHash = window.location.hash;
+      if (hashRef.current === nextHash && !capturing.current) return;
+      const prevHash = hashRef.current;
+      hashRef.current = nextHash;
+      if (capturing.current) {
+        setRoute(parseHash(nextHash));
+        return;
+      }
+      const popped = popBack.current;
+      popBack.current = false;
+      const apply = () => setRoute(parseHash(nextHash));
+      if (transitionKey(prevHash) !== transitionKey(nextHash)) {
+        playTransition(navDirection(prevHash, nextHash, popped), apply);
+        return;
+      }
+      apply();
+    };
+    window.addEventListener('popstate', onPop);
     window.addEventListener('hashchange', onHash);
-    return () => window.removeEventListener('hashchange', onHash);
+    return () => {
+      window.removeEventListener('popstate', onPop);
+      window.removeEventListener('hashchange', onHash);
+    };
   }, []);
-  const navigate = useCallback<Navigate>((hash, mode) => go(hash, mode), []);
+
+  const navigate = useCallback<Navigate>((hash, mode) => {
+    const nextHash = hash.startsWith('#') ? hash : `#${hash}`;
+    const prevHash = window.location.hash;
+    const apply = () => {
+      capturing.current = true;
+      go(nextHash, mode);
+      capturing.current = false;
+    };
+    if (transitionKey(prevHash) !== transitionKey(nextHash)) {
+      playTransition(navDirection(prevHash, nextHash, false), apply);
+      return;
+    }
+    delete document.documentElement.dataset.spNav;
+    apply();
+  }, []);
   return [route, navigate];
 }
 
@@ -95,6 +193,8 @@ export function App() {
   return (
     <AppShell
       className="sp-shell mors-scope"
+      data-mors-palette="retro"
+      sidebar={provider && showTabs ? <AppSidebar route={route} navigate={navigate} /> : undefined}
       header={
         <header className="sp-header">
           <SkipLink href="#sp-main">{t('skip')}</SkipLink>
@@ -107,7 +207,9 @@ export function App() {
                   onClick={() => navigate(back)}
                 />
               ) : (
-                <BusMark />
+                <span className="sp-header-mark">
+                  <BusMark />
+                </span>
               )}
               {route.name === 'home' || route.name === 'provider' ? (
                 <span className="sp-brand">ShamPass</span>
@@ -115,6 +217,22 @@ export function App() {
                 <span className="sp-header-title">{title}</span>
               )}
             </div>
+            {!provider && showTabs && (
+              <nav className="sp-nav" aria-label="ShamPass">
+                <button type="button" className={tab === 'search' ? 'is-current' : undefined} onClick={() => navigate('#/')}>
+                  <Icon name="search" />
+                  {t('searchTab')}
+                </button>
+                <button
+                  type="button"
+                  className={tab === 'tickets' ? 'is-current' : undefined}
+                  onClick={() => navigate(user ? '#/tickets' : loginPath('/tickets'))}
+                >
+                  <TicketGlyph />
+                  {t('ticketsTab')}
+                </button>
+              </nav>
+            )}
             <div className="sp-header-actions">
               {user && (
                 <Button variant="ghost" aria-label={t('notify')} onClick={() => navigate('#/notifications')}>
@@ -132,7 +250,7 @@ export function App() {
       }
       tabBar={
         showTabs ? (
-          <TabBar value={tab} visibility="always" aria-label="ShamPass">
+          <TabBar value={tab} visibility="mobile" aria-label="ShamPass">
             {provider ? (
               <>
                 <TabBarItem value="desk" label={t('deskTab')} icon={<Icon name="home" />} onClick={() => navigate('#/provider')} />
@@ -149,35 +267,106 @@ export function App() {
       }
     >
       <div id="sp-main" tabIndex={-1} className={showTabs ? 'sp-page' : 'sp-page sp-page--dock'}>
-        {!ready && needsAccount ? (
-          <p className="sp-loading">{t('loading')}</p>
-        ) : needsAccount && !user ? (
-          <LoginPage next={currentNext} navigate={navigate} />
-        ) : (
-          <>
-            {route.name === 'home' && <HomePage navigate={navigate} />}
-            {route.name === 'results' && <ResultsPage key={key} query={route.query} navigate={navigate} />}
-            {route.name === 'seats' && <SeatsPage query={route.query} tripId={route.tripId} seatIds={route.seatIds} navigate={navigate} />}
-            {route.name === 'pay' && <CheckoutPage key={key} query={route.query} tripId={route.tripId} seatIds={route.seatIds} navigate={navigate} />}
-            {route.name === 'ticket' && user && <TicketPage key={key} id={route.id} navigate={navigate} />}
-            {route.name === 'tickets' && user && <TicketsPage navigate={navigate} />}
-            {route.name === 'login' && <LoginPage next={route.next} navigate={navigate} />}
-            {route.name === 'register' && <RegisterPage next={route.next} navigate={navigate} />}
-            {route.name === 'notifications' && user && <NotificationsPage />}
-            {route.name === 'account' && user && <AccountPage navigate={navigate} />}
-            {route.name === 'provider' && user && <ProviderHome navigate={navigate} />}
-            {route.name === 'buses' && user && <BusesPage navigate={navigate} />}
-            {route.name === 'bus' && user && <BusPage id={route.id} navigate={navigate} />}
-            {route.name === 'routes' && user && <RoutesPage navigate={navigate} />}
-            {route.name === 'routeEdit' && user && <RoutePage id={route.id} navigate={navigate} />}
-            {route.name === 'trips' && user && <TripsPage navigate={navigate} />}
-            {route.name === 'tripEdit' && user && <TripPage id={route.id} navigate={navigate} />}
-            {route.name === 'providerBookings' && user && <ProviderBookingsPage />}
-          </>
-        )}
+        <div key={route.name} className="sp-view">
+          {!ready && needsAccount ? (
+            <p className="sp-loading">{t('loading')}</p>
+          ) : needsAccount && !user ? (
+            <LoginPage next={currentNext} navigate={navigate} />
+          ) : (
+            <>
+              {route.name === 'home' && <HomePage navigate={navigate} />}
+              {route.name === 'results' && <ResultsPage key={key} query={route.query} navigate={navigate} />}
+              {route.name === 'seats' && <SeatsPage query={route.query} tripId={route.tripId} seatIds={route.seatIds} navigate={navigate} />}
+              {route.name === 'pay' && <CheckoutPage key={key} query={route.query} tripId={route.tripId} seatIds={route.seatIds} navigate={navigate} />}
+              {route.name === 'ticket' && user && <TicketPage key={key} id={route.id} navigate={navigate} />}
+              {route.name === 'tickets' && user && <TicketsPage navigate={navigate} />}
+              {route.name === 'login' && <LoginPage next={route.next} navigate={navigate} />}
+              {route.name === 'register' && <RegisterPage next={route.next} navigate={navigate} />}
+              {route.name === 'notifications' && user && <NotificationsPage />}
+              {route.name === 'account' && user && <AccountPage navigate={navigate} />}
+              {route.name === 'provider' && user && <ProviderHome navigate={navigate} />}
+              {route.name === 'buses' && user && <BusesPage navigate={navigate} />}
+              {route.name === 'bus' && user && <BusPage id={route.id} navigate={navigate} />}
+              {route.name === 'routes' && user && <RoutesPage navigate={navigate} />}
+              {route.name === 'routeEdit' && user && <RoutePage id={route.id} navigate={navigate} />}
+              {route.name === 'trips' && user && <TripsPage navigate={navigate} />}
+              {route.name === 'tripEdit' && user && <TripPage id={route.id} navigate={navigate} />}
+              {route.name === 'providerBookings' && user && <ProviderBookingsPage />}
+            </>
+          )}
+        </div>
       </div>
     </AppShell>
   );
+}
+
+function AppSidebar({ route, navigate }: { route: AppRoute; navigate: Navigate }) {
+  const { t } = useI18n();
+  return (
+    <Sidebar className="sp-sidebar" aria-label="ShamPass">
+      <SidebarHeader>
+        <BusMark />
+        <span className="sp-brand">ShamPass</span>
+      </SidebarHeader>
+      <SidebarNav>
+        <SidebarSection>
+          <SidebarItem active={route.name === 'provider'} icon={<Icon name="home" />} onClick={() => navigate('#/provider')}>
+            {t('deskTab')}
+          </SidebarItem>
+          <SidebarItem active={route.name === 'buses' || route.name === 'bus'} icon={<Icon name="folder" />} onClick={() => navigate('#/provider/buses')}>
+            {t('buses')}
+          </SidebarItem>
+          <SidebarItem
+            active={route.name === 'routes' || route.name === 'routeEdit'}
+            icon={<Icon name="arrow-right" />}
+            onClick={() => navigate('#/provider/routes')}
+          >
+            {t('routesNav')}
+          </SidebarItem>
+          <SidebarItem active={route.name === 'trips' || route.name === 'tripEdit'} icon={<Icon name="calendar" />} onClick={() => navigate('#/provider/trips')}>
+            {t('tripsNav')}
+          </SidebarItem>
+          <SidebarItem active={route.name === 'providerBookings'} icon={<TicketGlyph />} onClick={() => navigate('#/provider/bookings')}>
+            {t('bookingsTab')}
+          </SidebarItem>
+        </SidebarSection>
+      </SidebarNav>
+    </Sidebar>
+  );
+}
+
+function motionOk(): boolean {
+  return !window.matchMedia('(prefers-reduced-motion: reduce)').matches && typeof document.startViewTransition === 'function';
+}
+
+function screenPath(hash: string): string {
+  const raw = (hash.startsWith('#') ? hash.slice(1) : hash).split('?')[0];
+  return raw || '/';
+}
+
+function transitionKey(hash: string): string {
+  const route = parseHash(hash.startsWith('#') ? hash : `#${hash}`);
+  if (route.name === 'pay') return `pay:${route.tripId}`;
+  return routeKey(route);
+}
+
+function screenDepth(path: string): number {
+  if (path === '/' || path === '/tickets' || path === '/provider') return 0;
+  if (path === '/seats' || path === '/ticket' || path === '/register' || path === '/provider/bus' || path === '/provider/route' || path === '/provider/trip') {
+    return 2;
+  }
+  if (path === '/pay') return 3;
+  return 1;
+}
+
+function navDirection(currentHash: string, nextHash: string, popped: boolean): 'forward' | 'back' {
+  if (popped) return 'back';
+  const current = parseHash(currentHash.startsWith('#') ? currentHash : `#${currentHash}`);
+  const nextPath = screenPath(nextHash);
+  const backs = [backHash(current, false), backHash(current, true)];
+  if (backs.some((hash) => hash !== null && screenPath(hash) === nextPath)) return 'back';
+  if (screenDepth(nextPath) < screenDepth(screenPath(currentHash))) return 'back';
+  return 'forward';
 }
 
 function pageTitle(route: AppRoute, t: ReturnType<typeof useI18n>['t'], lang: ReturnType<typeof useI18n>['lang']): string {

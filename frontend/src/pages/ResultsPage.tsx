@@ -15,13 +15,14 @@ export function ResultsPage({ query, navigate }: { query: SearchQuery; navigate:
   const [sort, setSort] = useState<SortKey>('depart');
   const [trips, setTrips] = useState<TripSummary[] | null>(null);
   const [routeExists, setRouteExists] = useState(true);
+  const [loading, setLoading] = useState(true);
   const [failed, setFailed] = useState(false);
   const today = todayISO();
 
   useEffect(() => {
     saveSearch(query);
     let active = true;
-    setTrips(null);
+    setLoading(true);
     setFailed(false);
     api
       .search(query.from, query.to, query.date)
@@ -29,9 +30,12 @@ export function ResultsPage({ query, navigate }: { query: SearchQuery; navigate:
         if (!active) return;
         setRouteExists(result.routeExists);
         setTrips(result.trips);
+        setLoading(false);
       })
       .catch(() => {
-        if (active) setFailed(true);
+        if (!active) return;
+        setFailed(true);
+        setLoading(false);
       });
     return () => {
       active = false;
@@ -46,30 +50,32 @@ export function ResultsPage({ query, navigate }: { query: SearchQuery; navigate:
 
   const days = useMemo(() => Array.from({ length: 14 }, (_, index) => addDays(today, index)), [today]);
 
-  if (failed) {
-    return <EmptyState title={t('errorGeneric')} actions={<Button onClick={() => navigate('#/')}>{t('changeSearch')}</Button>} />;
-  }
-  if (!trips) return <p className="sp-loading">{t('loading')}</p>;
-  if (!routeExists || query.from === query.to) {
-    return (
-      <EmptyState
-        title={t('noRoute')}
-        description={t('noRouteBody')}
-        actions={<Button onClick={() => navigate('#/')}>{t('changeSearch')}</Button>}
-      />
-    );
-  }
-
   const nextDay = addDays(query.date, 1);
   const canNext = nextDay <= addDays(today, 13);
+  const showSkeleton = loading && trips === null;
 
   return (
-    <div className="sp-stack">
+    <div className="sp-stack sp-results">
+      <div className="sp-results-bar">
       <p className="sp-sub">
         {formatLongDate(query.date, lang)}
         {' · '}
         {query.pax === 1 ? t('paxOne') : t('paxCount', { n: query.pax })}
       </p>
+      <div className="sp-sort" role="group">
+        {(['depart', 'price', 'duration'] as const).map((key) => (
+          <button
+            key={key}
+            type="button"
+            className={sort === key ? 'sp-sort-btn is-selected' : 'sp-sort-btn'}
+            aria-pressed={sort === key}
+            onClick={() => setSort(key)}
+          >
+            {t(key === 'depart' ? 'sortDepart' : key === 'price' ? 'sortPrice' : 'sortDuration')}
+          </button>
+        ))}
+      </div>
+      </div>
       <div className="sp-days" role="group" aria-label={t('date')}>
         {days.map((day) => {
           const parsed = new Date(`${day}T12:00:00`);
@@ -99,46 +105,52 @@ export function ResultsPage({ query, navigate }: { query: SearchQuery; navigate:
           );
         })}
       </div>
-      <div className="sp-sort" role="group">
-        {(['depart', 'price', 'duration'] as const).map((key) => (
-          <button
-            key={key}
-            type="button"
-            className={sort === key ? 'sp-sort-btn is-selected' : 'sp-sort-btn'}
-            aria-pressed={sort === key}
-            onClick={() => setSort(key)}
-          >
-            {t(key === 'depart' ? 'sortDepart' : key === 'price' ? 'sortPrice' : 'sortDuration')}
-          </button>
-        ))}
+      <div className={loading ? 'sp-results-panel is-loading' : 'sp-results-panel'} aria-busy={loading}>
+        {loading && <div className="sp-results-progress" role="progressbar" aria-label={t('loading')} />}
+        {failed ? (
+          <EmptyState title={t('errorGeneric')} actions={<Button onClick={() => navigate('#/')}>{t('changeSearch')}</Button>} />
+        ) : showSkeleton ? (
+          <ul className="sp-trip-list is-skeleton" aria-hidden="true">
+            {[0, 1, 2].map((item) => (
+              <li key={item}>
+                <div className="sp-trip-skeleton" />
+              </li>
+            ))}
+          </ul>
+        ) : !routeExists || query.from === query.to ? (
+          <EmptyState
+            title={t('noRoute')}
+            description={t('noRouteBody')}
+            actions={<Button onClick={() => navigate('#/')}>{t('changeSearch')}</Button>}
+          />
+        ) : sorted.length === 0 ? (
+          <EmptyState
+            title={t('noTrips')}
+            description={t('noTripsBody')}
+            actions={
+              canNext ? (
+                <Button
+                  onClick={() => {
+                    const next = { ...query, date: nextDay };
+                    saveSearch(next);
+                    navigate(resultsPath(next));
+                  }}
+                >
+                  {t('nextDay')}
+                </Button>
+              ) : undefined
+            }
+          />
+        ) : (
+          <ul className="sp-trip-list">
+            {sorted.map((trip) => (
+              <li key={trip.id}>
+                <TripCard trip={trip} onSelect={() => navigate(seatsPath(query, trip.id, []))} />
+              </li>
+            ))}
+          </ul>
+        )}
       </div>
-      {sorted.length === 0 ? (
-        <EmptyState
-          title={t('noTrips')}
-          description={t('noTripsBody')}
-          actions={
-            canNext ? (
-              <Button
-                onClick={() => {
-                  const next = { ...query, date: nextDay };
-                  saveSearch(next);
-                  navigate(resultsPath(next));
-                }}
-              >
-                {t('nextDay')}
-              </Button>
-            ) : undefined
-          }
-        />
-      ) : (
-        <ul className="sp-trip-list">
-          {sorted.map((trip) => (
-            <li key={trip.id}>
-              <TripCard trip={trip} onSelect={() => navigate(seatsPath(query, trip.id, []))} />
-            </li>
-          ))}
-        </ul>
-      )}
     </div>
   );
 }

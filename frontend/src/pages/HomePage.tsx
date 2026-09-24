@@ -72,21 +72,23 @@ export function HomePage({ navigate }: { navigate: Navigate }) {
   const cities = catalog?.cities ?? [];
 
   return (
-    <div className="sp-stack">
+    <div className="sp-stack sp-home">
       <header className="sp-hero">
         <p className="sp-kicker">{t('homeKicker')}</p>
         <h1>{t('homeTitle')}</h1>
         <p className="sp-lead">{t('homeLead')}</p>
       </header>
 
+      <div className="sp-home-primary">
       <Card padding="sm" elevation="raised">
         <form
-          className="sp-form"
+          className="sp-form sp-search-form"
           onSubmit={(event) => {
             event.preventDefault();
             search({ from, to, date, pax });
           }}
         >
+          <div className="sp-route-fields">
           <Select
             label={t('from')}
             options={options}
@@ -118,6 +120,7 @@ export function HomePage({ navigate }: { navigate: Navigate }) {
               setSameCity(false);
             }}
           />
+          </div>
           <DatePicker
             label={t('date')}
             value={dateValue}
@@ -161,7 +164,9 @@ export function HomePage({ navigate }: { navigate: Navigate }) {
           <p className="sp-fine">{t('sampleFares')}</p>
         </form>
       </Card>
+      </div>
 
+      <div className="sp-home-secondary">
       <section className="sp-section" aria-labelledby="sp-popular-title">
         <h2 id="sp-popular-title">{t('popular')}</h2>
         <div className="sp-popular">
@@ -220,6 +225,7 @@ export function HomePage({ navigate }: { navigate: Navigate }) {
           </li>
         </ol>
       </section>
+      </div>
     </div>
   );
 }

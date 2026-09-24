@@ -1,7 +1,7 @@
 export function BusMark({ size = 28 }: { size?: number }) {
   return (
     <svg width={size} height={size} viewBox="0 0 32 32" aria-hidden="true" focusable="false">
-      <rect width="32" height="32" rx="9" fill="#0e6b4f" />
+      <rect width="32" height="32" rx="9" fill="var(--mors-color-accent)" />
       <path
         d="M8 21V12.2A2.2 2.2 0 0 1 10.2 10h11.6A2.2 2.2 0 0 1 24 12.2V21"
         fill="none"

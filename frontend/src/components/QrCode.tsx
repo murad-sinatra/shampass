@@ -10,7 +10,7 @@ export function QrCode({ value, label }: { value: string; label: string }) {
       margin: 1,
       width: 320,
       errorCorrectionLevel: 'M',
-      color: { dark: '#1c1915', light: '#fffdf8' },
+      color: { dark: '#1d1d1f', light: '#ffffff' },
     })
       .then((url) => {
         if (alive) setSrc(url);

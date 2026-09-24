@@ -3,7 +3,7 @@ import { Alert, Button, EmptyState, TextField } from 'mors-component-library';
 import { api, explain } from '../api';
 import { useAuth } from '../auth';
 import { FlowSteps } from '../components/FlowSteps';
-import { formatMoney, formatTime } from '../format';
+import { formatDuration, formatLongDate, formatMoney, formatTime } from '../format';
 import { useI18n, type MessageKey } from '../i18n';
 import {
   digitsOnly,
@@ -17,7 +17,7 @@ import {
 } from '../payment';
 import { loginPath, resultsPath, seatsPath, ticketPath, type Navigate, type SearchQuery } from '../route';
 import { loadCheckoutDraft, saveCheckoutDraft } from '../storage';
-import type { Seat, Trip } from '../types';
+import type { AmenityId, Seat, Trip } from '../types';
 
 export function CheckoutPage({
   query,
@@ -167,30 +167,74 @@ export function CheckoutPage({
         void pay();
       }}
     >
+      <div className="sp-checkout">
+      <div className="sp-checkout-intro">
       <FlowSteps current={1} />
-      <p className="sp-sub">
-        {lang === 'ar' ? trip.company.ar : trip.company.en}
-        {' · '}
-        {formatTime(trip.departAt, lang)} {trip.origin[lang]}
-        <span className="sp-forward"> → </span>
-        {trip.destination[lang]}
-      </p>
       {missing && (
         <Alert tone="warning" title={t('takenSeat')}>
           {t('changeSeats')}
         </Alert>
       )}
-      <section className="sp-section">
+      </div>
+      <aside className="sp-checkout-aside">
+      <section className="sp-section sp-panel sp-summary">
         <div className="sp-section-head">
-          <h2>{t('yourSeats')}</h2>
+          <h2>{t('tripSummary')}</h2>
           <Button variant="link" onClick={() => navigate(seatsPath(query, trip.id, seats.map((seat) => seat.id)))}>
             {t('changeSeats')}
           </Button>
         </div>
+        <p className="sp-summary-company">
+          <span className="sp-summary-mark" style={{ background: trip.company.color }} aria-hidden="true" />
+          <span>
+            <strong>{lang === 'ar' ? trip.company.ar : trip.company.en}</strong>
+            <span>{t('coach', { n: trip.coach })}</span>
+          </span>
+        </p>
+        <p className="sp-summary-date">{formatLongDate(query.date, lang)}</p>
+        <div className="sp-route-graph">
+          <div className="sp-route-stop">
+            <span className="sp-route-dot" aria-hidden="true" />
+            <span>
+              <small>{t('departs')}</small>
+              <strong className="sp-time">{formatTime(trip.departAt, lang)}</strong>
+              <span className="sp-place">{trip.origin[lang]}</span>
+            </span>
+          </div>
+          <div className="sp-route-leg">
+            <span className="sp-route-stem" aria-hidden="true" />
+            <span className="sp-route-chip">
+              <span className="sp-route-bar" aria-hidden="true">
+                <span />
+              </span>
+              {formatDuration(trip.durationMin, lang)} · {t('direct')}
+            </span>
+          </div>
+          <div className="sp-route-stop">
+            <span className="sp-route-dot is-end" aria-hidden="true" />
+            <span>
+              <small>{t('arrives')}</small>
+              <strong className="sp-time">{formatTime(trip.arriveAt, lang)}</strong>
+              <span className="sp-place">{trip.destination[lang]}</span>
+            </span>
+          </div>
+        </div>
+        {trip.amenities.length > 0 && (
+          <ul className="sp-amenity-row">
+            {trip.amenities.map((amenity) => (
+              <li key={amenity}>
+                <AmenityIcon id={amenity} />
+                {t(amenity)}
+              </li>
+            ))}
+          </ul>
+        )}
+        <h3>{t('yourSeats')}</h3>
         <ul className="sp-fare-list">
           {seats.map((seat) => (
             <li key={seat.id}>
               <span>
+                <SeatIcon />
                 {seat.label} · {t(seat.classId)}
               </span>
               <strong>{formatMoney(seat.price, lang)}</strong>
@@ -202,7 +246,10 @@ export function CheckoutPage({
           </li>
         </ul>
       </section>
-      <section className="sp-section">
+      </aside>
+      <div className="sp-checkout-main">
+      <section className="sp-section sp-panel sp-fields">
+        <h2>{t('passengers')}</h2>
         {seats.map((seat) => (
           <TextField
             key={seat.id}
@@ -234,7 +281,7 @@ export function CheckoutPage({
           }}
         />
       </section>
-      <section className="sp-section">
+      <section className="sp-section sp-panel">
         <h2>{t('payWith')}</h2>
         <div className="sp-pay-list" role="radiogroup" aria-label={t('payWith')}>
           {(['shamcash', 'visa', 'mastercard'] as const).map((option) => (
@@ -335,6 +382,8 @@ export function CheckoutPage({
         </Alert>
         {formError && <Alert tone="danger" title={formError} />}
       </section>
+      </div>
+      </div>
       <div className="sp-dock">
         <div className="sp-dock-inner">
           <div className="sp-dock-copy">
@@ -347,6 +396,51 @@ export function CheckoutPage({
         </div>
       </div>
     </form>
+  );
+}
+
+function AmenityIcon({ id }: { id: AmenityId }) {
+  const common = { viewBox: '0 0 24 24', 'aria-hidden': true as const, focusable: 'false' as const, className: 'sp-mini-icon' };
+  if (id === 'ac') {
+    return (
+      <svg {...common}>
+        <path d="M12 3v10M8 7l4 4 4-4M6 17h12M8 20h8" />
+      </svg>
+    );
+  }
+  if (id === 'usb') {
+    return (
+      <svg {...common}>
+        <path d="M12 3v8M9 6h6M10 14v7M14 14v7M10 18h4" />
+      </svg>
+    );
+  }
+  if (id === 'wifi') {
+    return (
+      <svg {...common}>
+        <path d="M5 10a10 10 0 0 1 14 0M8 13a6 6 0 0 1 8 0M12 17h.01" />
+      </svg>
+    );
+  }
+  if (id === 'water') {
+    return (
+      <svg {...common}>
+        <path d="M12 3s6 7 6 11a6 6 0 0 1-12 0c0-4 6-11 6-11z" />
+      </svg>
+    );
+  }
+  return (
+    <svg {...common}>
+      <path d="M4 16V9a2 2 0 0 1 2-2h12a2 2 0 0 1 2 2v7M4 16h16M7 19h.01M17 19h.01" />
+    </svg>
+  );
+}
+
+function SeatIcon() {
+  return (
+    <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false" className="sp-mini-icon">
+      <path d="M7 4h6a2 2 0 0 1 2 2v9H7zM5 15h14v2a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2zM9 20v1M15 20v1" />
+    </svg>
   );
 }
 

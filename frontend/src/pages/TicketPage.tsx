@@ -2,7 +2,6 @@ import { useEffect, useState } from 'react';
 import { Alert, Button, ConfirmDialog, EmptyState, useToast } from 'mors-component-library';
 import { api, explain } from '../api';
 import { useAuth } from '../auth';
-import { FlowSteps } from '../components/FlowSteps';
 import { QrCode } from '../components/QrCode';
 import { formatMoney, formatTicketWhen, formatTime } from '../format';
 import { useI18n, type MessageKey } from '../i18n';
@@ -85,8 +84,7 @@ export function TicketPage({ id, navigate }: { id: string; navigate: Navigate })
   }
 
   return (
-    <div className="sp-stack">
-      <FlowSteps current={2} />
+    <div className="sp-stack sp-ticket">
       <header className="sp-ticket-intro">
         <p className="sp-kicker">{t('reference')}</p>
         <h1>{booking.id}</h1>
@@ -113,9 +111,11 @@ export function TicketPage({ id, navigate }: { id: string; navigate: Navigate })
         </ol>
         {booking.trip.status === 'cancelled' && <Alert tone="danger" title={t('statusCancelled')} />}
       </section>
+      <div className="sp-passes">
       {booking.seats.map((seat) => (
         <BoardingPass key={seat.id} booking={booking} seat={seat} />
       ))}
+      </div>
       {error && <Alert tone="danger" title={error} />}
       <div className="sp-ticket-actions">
         <Button variant="secondary" block onClick={() => void share()}>
