@@ -1,0 +1,227 @@
+generator client {
+  provider      = "prisma-client-js"
+  binaryTargets = ["native", "linux-musl-openssl-3.0.x"]
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum Role {
+  customer
+  provider
+}
+
+enum SeatClass {
+  economy
+  comfort
+  premium
+}
+
+enum TripStatus {
+  scheduled
+  boarding
+  departed
+  arrived
+  cancelled
+}
+
+enum SeatStatus {
+  available
+  booked
+  blocked
+}
+
+enum BookingStatus {
+  confirmed
+  cancelled
+}
+
+enum PayMethod {
+  shamcash
+  visa
+  mastercard
+}
+
+model User {
+  id            String         @id @default(uuid())
+  username      String         @unique
+  passwordHash  String         @map("password_hash")
+  name          String
+  phone         String?
+  role          Role
+  createdAt     DateTime       @default(now()) @map("created_at")
+  company       Company?
+  bookings      Booking[]
+  notifications Notification[]
+
+  @@map("users")
+}
+
+model Company {
+  id        String   @id @default(uuid())
+  ownerId   String   @unique @map("owner_id")
+  owner     User     @relation(fields: [ownerId], references: [id])
+  nameEn    String   @map("name_en")
+  nameAr    String   @map("name_ar")
+  color     String
+  phone     String?
+  createdAt DateTime @default(now()) @map("created_at")
+  buses     Bus[]
+  routes    Route[]
+
+  @@map("companies")
+}
+
+model City {
+  id         String  @id
+  nameEn     String  @map("name_en")
+  nameAr     String  @map("name_ar")
+  routesFrom Route[] @relation("RouteOrigin")
+  routesTo   Route[] @relation("RouteDestination")
+
+  @@map("cities")
+}
+
+model Bus {
+  id        String    @id @default(uuid())
+  companyId String    @map("company_id")
+  company   Company   @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  name      String
+  code      String
+  amenities String[]
+  active    Boolean   @default(true)
+  createdAt DateTime  @default(now()) @map("created_at")
+  seats     BusSeat[]
+  trips     Trip[]
+
+  @@unique([companyId, code])
+  @@map("buses")
+}
+
+model BusSeat {
+  id    String    @id @default(uuid())
+  busId String    @map("bus_id")
+  bus   Bus       @relation(fields: [busId], references: [id], onDelete: Cascade)
+  label String
+  row   Int
+  col   String
+  class SeatClass
+
+  @@unique([busId, label])
+  @@map("bus_seats")
+}
+
+model Route {
+  id            String       @id @default(uuid())
+  companyId     String       @map("company_id")
+  company       Company      @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  originId      String       @map("origin_id")
+  destinationId String       @map("destination_id")
+  origin        City         @relation("RouteOrigin", fields: [originId], references: [id])
+  destination   City         @relation("RouteDestination", fields: [destinationId], references: [id])
+  durationMin   Int          @map("duration_min")
+  distanceKm    Int          @map("distance_km")
+  active        Boolean      @default(true)
+  prices        RoutePrice[]
+  trips         Trip[]
+
+  @@unique([companyId, originId, destinationId])
+  @@index([originId, destinationId])
+  @@map("routes")
+}
+
+model RoutePrice {
+  id       String    @id @default(uuid())
+  routeId  String    @map("route_id")
+  route    Route     @relation(fields: [routeId], references: [id], onDelete: Cascade)
+  class    SeatClass
+  priceSyp Int       @map("price_syp")
+
+  @@unique([routeId, class])
+  @@map("route_prices")
+}
+
+model Trip {
+  id        String     @id @default(uuid())
+  routeId   String     @map("route_id")
+  route     Route      @relation(fields: [routeId], references: [id])
+  busId     String     @map("bus_id")
+  bus       Bus        @relation(fields: [busId], references: [id])
+  departAt  DateTime   @map("depart_at")
+  arriveAt  DateTime   @map("arrive_at")
+  status    TripStatus @default(scheduled)
+  createdAt DateTime   @default(now()) @map("created_at")
+  seats     TripSeat[]
+  bookings  Booking[]
+
+  @@index([departAt])
+  @@index([routeId, departAt])
+  @@map("trips")
+}
+
+model TripSeat {
+  id           String        @id @default(uuid())
+  tripId       String        @map("trip_id")
+  trip         Trip          @relation(fields: [tripId], references: [id], onDelete: Cascade)
+  label        String
+  row          Int
+  col          String
+  class        SeatClass
+  priceSyp     Int           @map("price_syp")
+  status       SeatStatus    @default(available)
+  bookingSeats BookingSeat[]
+
+  @@unique([tripId, label])
+  @@map("trip_seats")
+}
+
+model Booking {
+  id        String        @id @default(uuid())
+  reference String        @unique
+  userId    String        @map("user_id")
+  user      User          @relation(fields: [userId], references: [id])
+  tripId    String        @map("trip_id")
+  trip      Trip          @relation(fields: [tripId], references: [id])
+  phone     String
+  payMethod PayMethod     @map("pay_method")
+  payLast4  String        @map("pay_last4")
+  status    BookingStatus @default(confirmed)
+  totalSyp  Int           @map("total_syp")
+  createdAt DateTime      @default(now()) @map("created_at")
+  seats     BookingSeat[]
+
+  @@index([userId, createdAt])
+  @@map("bookings")
+}
+
+model BookingSeat {
+  id            String   @id @default(uuid())
+  bookingId     String   @map("booking_id")
+  booking       Booking  @relation(fields: [bookingId], references: [id], onDelete: Cascade)
+  tripSeatId    String   @map("trip_seat_id")
+  tripSeat      TripSeat @relation(fields: [tripSeatId], references: [id])
+  passengerName String   @map("passenger_name")
+  priceSyp      Int      @map("price_syp")
+
+  @@index([tripSeatId])
+  @@map("booking_seats")
+}
+
+model Notification {
+  id        String    @id @default(uuid())
+  userId    String    @map("user_id")
+  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  bookingId String?   @map("booking_id")
+  kind      String
+  titleAr   String    @map("title_ar")
+  titleEn   String    @map("title_en")
+  bodyAr    String    @map("body_ar")
+  bodyEn    String    @map("body_en")
+  readAt    DateTime? @map("read_at")
+  createdAt DateTime  @default(now()) @map("created_at")
+
+  @@index([userId, createdAt])
+  @@map("notifications")
+}
