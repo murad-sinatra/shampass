@@ -1,17 +1,10 @@
 export function BusMark({ size = 28 }: { size?: number }) {
   return (
     <svg width={size} height={size} viewBox="0 0 32 32" aria-hidden="true" focusable="false">
-      <rect width="32" height="32" rx="9" fill="var(--mors-color-accent)" />
-      <path
-        d="M8 21V12.2A2.2 2.2 0 0 1 10.2 10h11.6A2.2 2.2 0 0 1 24 12.2V21"
-        fill="none"
-        stroke="#fff"
-        strokeWidth="1.7"
-        strokeLinecap="round"
-      />
-      <path d="M8 16.2h16" stroke="#fff" strokeWidth="1.7" strokeLinecap="round" />
-      <circle cx="11.5" cy="21" r="1.35" fill="#fff" />
-      <circle cx="20.5" cy="21" r="1.35" fill="#fff" />
+      <rect width="32" height="32" rx="4" fill="#0f766e" />
+      <path d="M6 16.5h20" stroke="#fff8e8" strokeWidth="2.2" strokeLinecap="round" />
+      <circle cx="9" cy="16.5" r="2.5" fill="#fff8e8" />
+      <circle cx="23" cy="16.5" r="2.5" fill="#fff8e8" />
     </svg>
   );
 }

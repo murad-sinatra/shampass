@@ -9,6 +9,7 @@ export interface SearchQuery {
 
 export type AppRoute =
   | { name: 'home' }
+  | { name: 'search' }
   | { name: 'results'; query: SearchQuery }
   | { name: 'seats'; query: SearchQuery; tripId: string; seatIds: string[] }
   | { name: 'pay'; query: SearchQuery; tripId: string; seatIds: string[] }
@@ -66,6 +67,7 @@ export function parseHash(hash: string): AppRoute {
   const params = new URLSearchParams(queryString ?? '');
   const next = params.get('next') ?? '';
 
+  if (path === '/search') return { name: 'search' };
   if (path === '/login') return { name: 'login', next };
   if (path === '/register') return { name: 'register', next };
   if (path === '/notifications') return { name: 'notifications' };
@@ -136,6 +138,7 @@ export function registerPath(next: string): string {
 export function routeKey(route: AppRoute): string {
   switch (route.name) {
     case 'home':
+    case 'search':
     case 'tickets':
     case 'notifications':
     case 'account':

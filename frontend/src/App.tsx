@@ -20,7 +20,8 @@ import { BusMark, TicketGlyph } from './icons';
 import { useDocumentLang, useI18n } from './i18n';
 import { AccountPage, LoginPage, RegisterPage } from './pages/AuthPages';
 import { CheckoutPage } from './pages/CheckoutPage';
-import { HomePage } from './pages/HomePage';
+import { LandingPage } from './pages/LandingPage';
+import { SearchPage } from './pages/HomePage';
 import { NotificationsPage } from './pages/NotificationsPage';
 import { BusPage, BusesPage, ProviderBookingsPage, ProviderHome, RoutePage, RoutesPage, TripPage, TripsPage } from './pages/ProviderPages';
 import { ResultsPage } from './pages/ResultsPage';
@@ -171,13 +172,18 @@ export function App() {
   const title = pageTitle(route, t, lang);
   const back = backHash(route, provider);
   const showTabs = route.name !== 'seats' && route.name !== 'pay' && route.name !== 'login' && route.name !== 'register';
-  const tab = provider
-    ? route.name === 'providerBookings'
-      ? 'bookings'
-      : 'desk'
-    : route.name === 'tickets' || route.name === 'ticket'
-      ? 'tickets'
-      : 'search';
+  const tab =
+    route.name === 'home'
+      ? ''
+      : provider
+        ? route.name === 'providerBookings'
+          ? 'bookings'
+          : 'desk'
+        : route.name === 'tickets' || route.name === 'ticket'
+          ? 'tickets'
+          : route.name === 'search' || route.name === 'results'
+            ? 'search'
+            : '';
 
   useEffect(() => {
     document.title = title === 'ShamPass' ? 'ShamPass' : `${title} · ShamPass`;
@@ -200,39 +206,13 @@ export function App() {
           <SkipLink href="#sp-main">{t('skip')}</SkipLink>
           <div className="sp-header-inner">
             <div className="sp-header-start">
-              {back ? (
-                <IconButton
-                  label={t('back')}
-                  icon={<Icon name={dir === 'rtl' ? 'chevron-right' : 'chevron-left'} />}
-                  onClick={() => navigate(back)}
-                />
-              ) : (
+              <button type="button" className="sp-brand-link" onClick={() => navigate('#/')}>
                 <span className="sp-header-mark">
                   <BusMark />
                 </span>
-              )}
-              {route.name === 'home' || route.name === 'provider' ? (
                 <span className="sp-brand">ShamPass</span>
-              ) : (
-                <span className="sp-header-title">{title}</span>
-              )}
+              </button>
             </div>
-            {!provider && showTabs && (
-              <nav className="sp-nav" aria-label="ShamPass">
-                <button type="button" className={tab === 'search' ? 'is-current' : undefined} onClick={() => navigate('#/')}>
-                  <Icon name="search" />
-                  {t('searchTab')}
-                </button>
-                <button
-                  type="button"
-                  className={tab === 'tickets' ? 'is-current' : undefined}
-                  onClick={() => navigate(user ? '#/tickets' : loginPath('/tickets'))}
-                >
-                  <TicketGlyph />
-                  {t('ticketsTab')}
-                </button>
-              </nav>
-            )}
             <div className="sp-header-actions">
               {user && (
                 <Button variant="ghost" aria-label={t('notify')} onClick={() => navigate('#/notifications')}>
@@ -258,7 +238,7 @@ export function App() {
               </>
             ) : (
               <>
-                <TabBarItem value="search" label={t('searchTab')} icon={<Icon name="search" />} onClick={() => navigate('#/')} />
+                <TabBarItem value="search" label={t('searchTab')} icon={<Icon name="search" />} onClick={() => navigate('#/search')} />
                 <TabBarItem value="tickets" label={t('ticketsTab')} icon={<TicketGlyph />} onClick={() => navigate(user ? '#/tickets' : loginPath('/tickets'))} />
               </>
             )}
@@ -267,14 +247,37 @@ export function App() {
       }
     >
       <div id="sp-main" tabIndex={-1} className={showTabs ? 'sp-page' : 'sp-page sp-page--dock'}>
+        {!provider && showTabs && (
+          <nav className="sp-nav" aria-label="ShamPass">
+            <button type="button" className={tab === 'search' ? 'is-current' : undefined} onClick={() => navigate('#/search')}>
+              <Icon name="search" />
+              {t('searchTab')}
+            </button>
+            <button
+              type="button"
+              className={tab === 'tickets' ? 'is-current' : undefined}
+              onClick={() => navigate(user ? '#/tickets' : loginPath('/tickets'))}
+            >
+              <TicketGlyph />
+              {t('ticketsTab')}
+            </button>
+          </nav>
+        )}
         <div key={route.name} className="sp-view">
+          {back && (
+            <button type="button" className="sp-back" onClick={() => navigate(back)}>
+              <Icon name={dir === 'rtl' ? 'chevron-right' : 'chevron-left'} />
+              {backLabel(route, t, lang, provider)}
+            </button>
+          )}
           {!ready && needsAccount ? (
             <p className="sp-loading">{t('loading')}</p>
           ) : needsAccount && !user ? (
             <LoginPage next={currentNext} navigate={navigate} />
           ) : (
             <>
-              {route.name === 'home' && <HomePage navigate={navigate} />}
+              {route.name === 'home' && <LandingPage navigate={navigate} />}
+              {route.name === 'search' && <SearchPage navigate={navigate} />}
               {route.name === 'results' && <ResultsPage key={key} query={route.query} navigate={navigate} />}
               {route.name === 'seats' && <SeatsPage query={route.query} tripId={route.tripId} seatIds={route.seatIds} navigate={navigate} />}
               {route.name === 'pay' && <CheckoutPage key={key} query={route.query} tripId={route.tripId} seatIds={route.seatIds} navigate={navigate} />}
@@ -351,7 +354,7 @@ function transitionKey(hash: string): string {
 }
 
 function screenDepth(path: string): number {
-  if (path === '/' || path === '/tickets' || path === '/provider') return 0;
+  if (path === '/' || path === '/search' || path === '/tickets' || path === '/provider') return 0;
   if (path === '/seats' || path === '/ticket' || path === '/register' || path === '/provider/bus' || path === '/provider/route' || path === '/provider/trip') {
     return 2;
   }
@@ -375,6 +378,8 @@ function pageTitle(route: AppRoute, t: ReturnType<typeof useI18n>['t'], lang: Re
     case 'login':
     case 'register':
       return 'ShamPass';
+    case 'search':
+      return t('searchTab');
     case 'tickets':
       return t('myTickets');
     case 'ticket':
@@ -405,10 +410,24 @@ function pageTitle(route: AppRoute, t: ReturnType<typeof useI18n>['t'], lang: Re
   }
 }
 
+function backLabel(
+  route: AppRoute,
+  t: ReturnType<typeof useI18n>['t'],
+  lang: ReturnType<typeof useI18n>['lang'],
+  provider: boolean,
+): string {
+  const hash = backHash(route, provider);
+  if (!hash) return t('back');
+  const target = parseHash(hash);
+  if (target.name === 'home') return 'ShamPass';
+  if (target.name === 'provider') return t('deskTab');
+  return pageTitle(target, t, lang);
+}
+
 function backHash(route: AppRoute, provider: boolean): string | null {
   switch (route.name) {
     case 'results':
-      return '#/';
+      return '#/search';
     case 'seats':
       return resultsPath(route.query);
     case 'pay':

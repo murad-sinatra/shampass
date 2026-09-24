@@ -31,7 +31,7 @@ export function TicketsPage({ navigate }: { navigate: Navigate }) {
       <EmptyState
         title={t('noTickets')}
         description={t('noTicketsBody')}
-        actions={<Button onClick={() => navigate('#/')}>{t('findBus')}</Button>}
+        actions={<Button onClick={() => navigate('#/search')}>{t('findBus')}</Button>}
       />
     );
   }

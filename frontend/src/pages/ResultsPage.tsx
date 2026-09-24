@@ -4,6 +4,7 @@ import { api } from '../api';
 import { TripCard } from '../components/TripCard';
 import { addDays, formatLongDate, todayISO } from '../format';
 import { useI18n } from '../i18n';
+import { cityLabel } from '../cities';
 import { resultsPath, seatsPath, type Navigate, type SearchQuery } from '../route';
 import { saveSearch } from '../storage';
 import type { TripSummary } from '../types';
@@ -56,6 +57,11 @@ export function ResultsPage({ query, navigate }: { query: SearchQuery; navigate:
 
   return (
     <div className="sp-stack sp-results">
+      <header className="sp-board-head">
+        <span>{cityLabel(query.from, lang)}</span>
+        <span className="sp-board-track" aria-hidden="true" />
+        <span>{cityLabel(query.to, lang)}</span>
+      </header>
       <div className="sp-results-bar">
       <p className="sp-sub">
         {formatLongDate(query.date, lang)}
@@ -108,7 +114,7 @@ export function ResultsPage({ query, navigate }: { query: SearchQuery; navigate:
       <div className={loading ? 'sp-results-panel is-loading' : 'sp-results-panel'} aria-busy={loading}>
         {loading && <div className="sp-results-progress" role="progressbar" aria-label={t('loading')} />}
         {failed ? (
-          <EmptyState title={t('errorGeneric')} actions={<Button onClick={() => navigate('#/')}>{t('changeSearch')}</Button>} />
+          <EmptyState title={t('errorGeneric')} actions={<Button onClick={() => navigate('#/search')}>{t('changeSearch')}</Button>} />
         ) : showSkeleton ? (
           <ul className="sp-trip-list is-skeleton" aria-hidden="true">
             {[0, 1, 2].map((item) => (
@@ -121,7 +127,7 @@ export function ResultsPage({ query, navigate }: { query: SearchQuery; navigate:
           <EmptyState
             title={t('noRoute')}
             description={t('noRouteBody')}
-            actions={<Button onClick={() => navigate('#/')}>{t('changeSearch')}</Button>}
+            actions={<Button onClick={() => navigate('#/search')}>{t('changeSearch')}</Button>}
           />
         ) : sorted.length === 0 ? (
           <EmptyState

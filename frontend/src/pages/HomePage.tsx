@@ -28,7 +28,7 @@ function initialQuery(): SearchQuery {
   return { from, to, date, pax };
 }
 
-export function HomePage({ navigate }: { navigate: Navigate }) {
+export function SearchPage({ navigate }: { navigate: Navigate }) {
   const { t, lang } = useI18n();
   const starting = useMemo(initialQuery, []);
   const [catalog, setCatalog] = useState<Catalog | null>(null);
@@ -197,33 +197,6 @@ export function HomePage({ navigate }: { navigate: Navigate }) {
             );
           })}
         </div>
-      </section>
-
-      <section className="sp-section" aria-labelledby="sp-how-title">
-        <h2 id="sp-how-title">{t('howTitle')}</h2>
-        <ol className="sp-how">
-          <li>
-            <span>1</span>
-            <div>
-              <strong>{t('how1')}</strong>
-              <p>{t('how1b')}</p>
-            </div>
-          </li>
-          <li>
-            <span>2</span>
-            <div>
-              <strong>{t('how2')}</strong>
-              <p>{t('how2b')}</p>
-            </div>
-          </li>
-          <li>
-            <span>3</span>
-            <div>
-              <strong>{t('how3')}</strong>
-              <p>{t('how3b')}</p>
-            </div>
-          </li>
-        </ol>
       </section>
       </div>
     </div>

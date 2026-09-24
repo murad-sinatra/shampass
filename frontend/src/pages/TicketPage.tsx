@@ -51,7 +51,7 @@ export function TicketPage({ id, navigate }: { id: string; navigate: Navigate })
       <EmptyState
         title={t('ticketMissing')}
         description={t('ticketMissingBody')}
-        actions={<Button onClick={() => navigate('#/')}>{t('findBus')}</Button>}
+        actions={<Button onClick={() => navigate('#/search')}>{t('findBus')}</Button>}
       />
     );
   }
