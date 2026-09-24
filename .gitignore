@@ -4,3 +4,5 @@ dist-demo
 .DS_Store
 *.local
 .vite
+.env
+backend/dist

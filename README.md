@@ -1,25 +1,44 @@
 # ShamPass
 
-Mobile-first booking for intercity buses in Syria. Search a route such as Damascus to Swida, pick a departure, choose a seat (economy, comfort, or premium — each seat has its own fare), pay with ShamCash, Visa, or Mastercard, and board with a QR ticket.
+Mobile-first booking for intercity buses in Syria. Passengers search a route, choose a seat and its fare, pay with ShamCash, Visa, or Mastercard, and board with a QR ticket. Bus companies use the same app to add routes, buses, seats, prices, and departures, and to move a trip from scheduled to boarding, on the way, and arrived.
 
-This is a demo. Checkout never contacts a bank or ShamCash, and nothing is charged. Tickets stay in this browser.
+Arabic is the default language. English is one tap away.
 
-## Run
+Checkout is still a demo. Nothing is sent to a bank or ShamCash, and nothing is charged. Google sign-in and separate provider and passenger apps can come later. So can GitHub Actions.
 
-```bash
-npm install
-npm run dev
-```
-
-Open the URL Vite prints. The dev server listens on port 5173.
+## Run with Docker
 
 ```bash
-npm run check
-npm run build
+docker compose up --build
 ```
+
+Open http://localhost:8080. The web container serves the React app and proxies `/api` to the NestJS API. Postgres keeps the data in the `shampass-pg` volume.
+
+```bash
+docker compose down -v
+```
+
+That deletes the database volume so the next start seeds it again.
+
+## Demo accounts
+
+| Who | Username | Password |
+| --- | --- | --- |
+| Passenger | `lina` | `lina1234` |
+| Sham Line | `shamline` | `shamline123` |
+| Barada Express | `barada` | `barada123` |
+| Qasioun Coach | `qasioun` | `qasioun123` |
+| Orontes | `orontes` | `orontes123` |
+| Jabal Coach | `jabal` | `jabal123` |
+
+Sample cards: Visa `4242 4242 4242 4242`, Mastercard `5555 5555 5555 4444`. Any future expiry and any 3-digit CVC. ShamCash accepts a Syrian mobile (`09xxxxxxxx`) and any 6-digit code.
 
 ## Stack
 
-React 19, TypeScript, and Vite. Interface components come from [mors-component-library](https://github.com/murad-sinatra/mors-component-library). The package exports a built `dist/` that is not in the Git tree, and npm’s Git installer honors the `files` list, so the dependency is the source tarball for commit `0a2163e`. `vite.config.ts` resolves the public entry to that source.
+- React 19, TypeScript, and Vite for the app in `frontend/`
+- NestJS and Prisma for the API in `backend/`
+- PostgreSQL 16
+- Docker Compose runs the database, the API, and nginx for the built frontend
+- UI components come from [mors-component-library](https://github.com/murad-sinatra/mors-component-library) at commit `0a2163e`
 
-Sample card numbers for the demo form: Visa `4242 4242 4242 4242`, Mastercard `5555 5555 5555 4444`. Any future expiry and any 3-digit CVC. ShamCash accepts a Syrian mobile (`09xxxxxxxx`) and any 6-digit code.
+Login is username and password. Tickets, notifications, and trip status live in Postgres.
